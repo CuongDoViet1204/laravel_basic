@@ -5,7 +5,5 @@ use App\Repositories\RepositoryInterface;
 
 interface CustomerRepositoryInterface extends RepositoryInterface
 {
-    public function getCustomerPaginate();
-
-    public function searchCustomer(string $text);
+    public function getCustomers(array $filter);
 }

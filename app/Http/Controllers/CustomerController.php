@@ -2,30 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Repositories\Customer\CustomerRepositoryInterface;
+use App\Dtos\Customer\CustomerDto;
+use App\Dtos\Customer\CustomerFilterDto;
+use App\Http\Requests\CustomerRequest;
+use App\Http\Services\CustomerService;
+use App\Models\Customer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller
 {
-    protected $customerRepo;
+    private $customerService;
 
-    public function __construct(CustomerRepositoryInterface $customerRepo)
+    public function __construct(CustomerService $customerService)
     {
-        $this->customerRepo = $customerRepo;
+        $this->customerService = $customerService;
     }
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+
+    public function index(Request $request)
     {
-        $search = '';
-        if (isset($_GET['search'])) {
-            $search = $_GET['search'];
-            $customers = $this->customerRepo->searchCustomer($search);
-        } else {
-            $customers = $this->customerRepo->getCustomerPaginate();
-        }
+        $search = (string)$request->query('search');
+        $customerFilterDto = new CustomerFilterDto(
+            $search,
+            $search
+        );
+        $customers = $this->customerService->getCustomers($customerFilterDto);
+
         return response()->json([
             'status_code' => 200,
             'data' => [
@@ -34,109 +35,63 @@ class CustomerController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(CustomerRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'fullname' => array('required', 'max:50'),
-            'sex' => array('required', 'numeric', 'in:0,1'),
-            'birthdate' => array('required', 'date'),
-            'phone' => array('required', 'regex:/^[0-9]{10,15}$/')
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status_code' => 400,
-                'message' => $validator->errors(),
-            ]);
-        }
-        $customer = $this->customerRepo->create($request->all());
+        $customerDto = new CustomerDto(
+            $request->get('fullname'),
+            $request->get('birthdate'),
+            $request->get('sex'),
+            $request->get('phone'),
+        );
+        $customer = $this->customerService->createCustomer($customerDto);
+
         return response()->json([
             'status_code' => 200,
             'message' => 'Create new customer success',
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(Customer $customer)
     {
-        $customer = $this->customerRepo->find($id);
-        if ($customer) {
-            return response()->json([
-                'status_code' => 200,
-                'data' => $customer,
-            ]);
-        }
         return response()->json([
-            'status_code' => 400,
-            'message' => 'Not found customer',
+            'status_code' => 200,
+            'data' => $customer,
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(CustomerRequest $request, Customer $customer)
     {
-        $validator = Validator::make($request->all(), [
-            'fullname' => array('required', 'max:50'),
-            'sex' => array('required', 'numeric', 'in:0,1'),
-            'birthdate' => array('required', 'date'),
-            'phone' => array('required', 'regex:/^[0-9]{10,15}$/')
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status_code' => 400,
-                'message' => $validator->errors(),
-            ]);
-        }
-        $customer = $this->customerRepo->update($id, $request->all());
-        if ($customer) {
-            return response()->json([
-                'status_code' => 200,
-                'message' => 'Update customer success',
-            ]); 
-        }
+        $customerDto = new CustomerDto(
+            $request->get('fullname'),
+            $request->get('birthdate'),
+            $request->get('sex'),
+            $request->get('phone'),
+        );
+        $customer = $this->customerService->updateCustomer($customerDto, $customer);
+
         return response()->json([
-            'status_code' => 400,
-            'message' => 'Not found customer',
+            'status_code' => 200,
+            'message' => 'Create new customer success',
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(Customer $customer)
     {
-        $deleteCustomer = $this->customerRepo->delete($id);
-        if ($deleteCustomer) {
-            return response()->json([
-                'status_code' => 200,
-                'message' => 'Delete customer success',
-            ]); 
-        }
+        $deleteCustomer = $this->customerService->deleteCustomer($customer);
+
         return response()->json([
-            'status_code' => 400,
-            'message' => 'Not found customer',
-        ]);
+            'status_code' => 200,
+            'message' => 'Delete customer success',
+        ]); 
     }
 }
